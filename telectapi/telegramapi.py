@@ -2,11 +2,13 @@ import os
 from random import randint
 
 from telethon import TelegramClient
-# todo:: write a method that khodesh tasmim begire ke new kone ya session e salem darim!
 from telethon.tl.functions.channels import CreateChannelRequest
 from telethon.tl.types import PeerChannel
 
 from telectapi.models import User
+
+
+# todo:: write a method that khodesh tasmim begire ke new kone ya session e salem darim!
 
 
 class TelegramApi:
@@ -61,7 +63,7 @@ class TelegramApi:
             mobile = user
 
         if session is None:
-            session = self.generated_sessions_dir + '/' + self.SESSIONS_PREFIX + str(mobile[-10:])
+            session = self.make_session(user)
         else:
             session = self.generated_sessions_dir + '/' + session
         print(session)
@@ -75,6 +77,18 @@ class TelegramApi:
 
         return client
 
+    def make_session(self, user):
+        """
+
+        :param User|str user:
+        :return: str
+        """
+        if type(user) == User:
+            mobile = user.mobile
+        else:
+            mobile = user
+        return self.generated_sessions_dir + '/' + self.SESSIONS_PREFIX + str(mobile[-10:])
+
     def get_new_session(self, user):
         """
 
@@ -87,31 +101,26 @@ class TelegramApi:
         if user is None:
             print("empty user!")
             return None
-        if type(user) == User:
-            mobile = user.mobile
-        else:
-            mobile = user
 
-        session = self.generated_sessions_dir + '/' + self.SESSIONS_PREFIX + str(mobile[-10:])
+        session = self.make_session(user)
         print(session)
 
         client = TelegramClient(session, api_id, api_hash)
         client.connect()
-
-        client.sign_in(phone=mobile)
 
         return client
 
     def get_existing_session(self, user=None, session=None):
         """
 
+        :param None|str session:
         :param User user:
         :return: TelegramClient
         """
         api_id, api_hash = self.get_app_data()
 
         if session is None:
-            session = self.generated_sessions_dir + '/' + self.SESSIONS_PREFIX + str(user.mobile[-10:])
+            session = self.make_session(user)
         else:
             session = self.generated_sessions_dir + '/' + session
         client = TelegramClient(session, api_id, api_hash)

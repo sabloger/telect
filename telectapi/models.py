@@ -1,5 +1,7 @@
 import datetime
 
+import jwt
+from django.contrib.auth.models import User as dUser
 from django.db import models
 from django_mysql.models import JSONField
 
@@ -11,6 +13,14 @@ class User(models.Model):
 
     def __str__(self):
         return self.mobile
+
+    def make_token(self):
+        return jwt.encode({'user_id': self.id}, 'secret', algorithm='HS256')
+
+    @staticmethod
+    def from_token(token):
+        payload = jwt.decode(token, 'secret', algorithms=['HS256'])
+        return User.objects.get(id=payload['user_id'])
 
 
 class Collection(models.Model):
@@ -50,3 +60,13 @@ class Source(models.Model):
 
     def __str__(self):
         return self.source_data['username']
+
+
+class AuthTemp(models.Model):
+    mobile = models.CharField(max_length=255)
+    phone_code_hash = models.CharField(max_length=255)
+    is_used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(default=datetime.datetime.now)
+
+    def __str__(self):
+        return self.phone_code_hash

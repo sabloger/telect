@@ -1,10 +1,16 @@
 from django.conf.urls import include, url
 from rest_framework import routers
 
+from telectapi.api.v1.channel import TgChannel
+from telectapi.api.v1.collection import Collection
+from telectapi.api.v1.collection_source import CollectionSource
 from telectapi.api.v1.user import User
 
 router = routers.DefaultRouter()
 router.register(r'user', User, "user")
+router.register(r'collection', Collection, "collection")
+router.register(r'channel', TgChannel, "channel")
+router.register(r'source', CollectionSource, "source")
 
 urlpatterns = [
     # url(r'^$', views.index, name='index'),
