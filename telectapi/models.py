@@ -15,12 +15,12 @@ class User(models.Model):
         return self.mobile
 
     def make_token(self):
-        return jwt.encode({'user_id': self.id}, 'secret', algorithm='HS256')
+        return jwt.encode({'user_id': (self.id * 2) + 5987456}, 'secret', algorithm='HS256')
 
     @staticmethod
     def from_token(token):
         payload = jwt.decode(token, 'secret', algorithms=['HS256'])
-        return User.objects.get(id=payload['user_id'])
+        return User.objects.get(id=(payload['user_id'] - 5987456) / 2)
 
 
 class Collection(models.Model):
@@ -34,7 +34,7 @@ class Collection(models.Model):
         default=TELEGRAM,
     )
     destination_data = JSONField()
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, )
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     payed = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=datetime.datetime.now)

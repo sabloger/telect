@@ -14,7 +14,7 @@ def index(request):
 
 
 def col(request):
-    user = User.objects.get(id=1111111111)
+    user = User.objects.get(id=1)
     # client = TelegramApi().sigh_in_org(user)
     client = TelegramApi().get_existing_session(user)
 
@@ -27,10 +27,10 @@ def col(request):
                 client(SearchGlobalRequest(q=chat.username, limit=10, offset_date=None, offset_id=0,
                                            offset_peer=InputPeerEmpty()))
 
-                src = Source.objects.create(collection_id=1, type=Source.TELEGRAM,
-                                            source_data={'id': chat.id,
-                                                         'username': chat.username})
-                print('New id:', src.id)
+                # src = Source.objects.create(collection_id=1, type=Source.TELEGRAM,
+                #                             source_data={'id': chat.id,
+                #                                          'username': chat.username})
+                # print('New id:', src.id)
 
     return HttpResponse(result.count())
 

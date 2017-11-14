@@ -16,14 +16,12 @@ class TgChannel(viewsets.ViewSet):
         :param Request request:
         :return:
         """
-
         client = TelegramApi().get_existing_session(request.user)
-
         result = client(GetAllChatsRequest([]))
         res_final = []
         for chat in result.chats:
             if type(chat) == Channel:
                 if chat.username is not None:
                     res_final.append(chat.to_dict())
-                    print(chat.username)
+        client.disconnect()
         return Response(res_final)

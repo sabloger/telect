@@ -2,6 +2,7 @@ from datetime import datetime
 from time import sleep
 
 from django.core.management import BaseCommand  # The class must be named Command, and subclass BaseCommand
+from telethon.errors import ChannelInvalidError
 from telethon.tl.functions.contacts import ResolveUsernameRequest
 from telethon.tl.functions.messages import ForwardMessagesRequest
 
@@ -19,11 +20,14 @@ class Command(BaseCommand):
         tg = TelegramApi()
         sys_sender_client = tg.get_sys_sender_client()
         for user in User.objects.all():
-            client = tg.get_existing_session(user)
+            print("user:", user)
+            user_client = tg.get_existing_session(user)
+            print(user.collection_set.all())
             for collection in user.collection_set.all():
-                dest_chan = tg.get_channel(sys_sender_client, collection.destination_data['id'])
+                print("collection:", collection)
+                dest_chan = tg.get_dest_channel(user_client, sys_sender_client, collection.destination_data['id'])
                 for source in collection.source_set.all():
-                    print(source)
+                    print("source:", source)
                     try:
                         channel = tg.get_channel(sys_sender_client,
                                                  source.source_data['id'])  # result is in descending sort
@@ -31,9 +35,13 @@ class Command(BaseCommand):
                         sys_sender_client(ResolveUsernameRequest(source.source_data['username']))
                         channel = tg.get_channel(sys_sender_client,
                                                  source.source_data['id'])  # result is in descending sort
-
                     sleep(1)
-                    total, messages, senders = client.get_message_history(channel, limit=20)
+                    try:
+                        total, messages, senders = user_client.get_message_history(channel, limit=20)
+                    except ChannelInvalidError:
+                        user_client(ResolveUsernameRequest(source.source_data['username']))
+                        total, messages, senders = user_client.get_message_history(channel, limit=20)
+
                     messages = messages[::-1]
                     for msg in messages:
                         if msg.date.timestamp() > source.last_fm_time.timestamp():

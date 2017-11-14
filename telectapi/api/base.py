@@ -1,3 +1,5 @@
+import functools
+
 import jwt
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.response import Response
@@ -5,13 +7,13 @@ from rest_framework.response import Response
 from telectapi.models import User
 
 
-def auth(func):
-    def jwt_auth(obj, request):
+def auth(f):
+    def wrapper(*args, **kwargs):
         try:
-            user = User.from_token(request.META['HTTP_AUTHORIZATION'])
+            user = User.from_token(args[1].META['HTTP_AUTHORIZATION'])
         except (jwt.exceptions.DecodeError, ValueError, ObjectDoesNotExist):
             return Response(status=401, data={"message": "unauthorized"})
-        request.user = user
-        return func(obj, request)
+        args[1].user = user
+        return f(*args, **kwargs)
 
-    return jwt_auth
+    return wrapper

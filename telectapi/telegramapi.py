@@ -1,14 +1,19 @@
 import os
+from datetime import timedelta
 from random import randint
 
 from telethon import TelegramClient
-from telethon.tl.functions.channels import CreateChannelRequest
-from telethon.tl.types import PeerChannel
+from telethon.errors import ChannelPrivateError, ChatAdminRequiredError
+from telethon.tl.functions.channels import CreateChannelRequest, EditAdminRequest, ExportInviteRequest, \
+    UpdateUsernameRequest
+from telethon.tl.functions.messages import ImportChatInviteRequest
+from telethon.tl.types import PeerChannel, ChannelAdminRights, InputUser
 
 from telectapi.models import User
 
 
 # todo:: write a method that khodesh tasmim begire ke new kone ya session e salem darim!
+# todo: make session clients singleton??
 
 
 class TelegramApi:
@@ -33,7 +38,7 @@ class TelegramApi:
     def connect_test_server(self):
         api_id, api_hash = self.get_app_data()
 
-        client = TelegramClient(None, api_id, api_hash)
+        client = TelegramClient(None, api_id, api_hash, timeout=timedelta(seconds=10))
         client.session.server_address = '149.154.167.40'
         client.connect()
 
@@ -68,7 +73,7 @@ class TelegramApi:
             session = self.generated_sessions_dir + '/' + session
         print(session)
 
-        client = TelegramClient(session, api_id, api_hash)
+        client = TelegramClient(session, api_id, api_hash, timeout=timedelta(seconds=10))
         client.connect()
 
         client.sign_in(phone=mobile)
@@ -105,7 +110,7 @@ class TelegramApi:
         session = self.make_session(user)
         print(session)
 
-        client = TelegramClient(session, api_id, api_hash)
+        client = TelegramClient(session, api_id, api_hash, timeout=timedelta(seconds=10))
         client.connect()
 
         return client
@@ -123,7 +128,7 @@ class TelegramApi:
             session = self.make_session(user)
         else:
             session = self.generated_sessions_dir + '/' + session
-        client = TelegramClient(session, api_id, api_hash)
+        client = TelegramClient(session, api_id, api_hash, timeout=timedelta(seconds=10))
         client.connect()
         return client
 
@@ -135,6 +140,48 @@ class TelegramApi:
         :return:
         """
         return client.get_entity(PeerChannel(channel_id))
+
+    def get_dest_channel(self, owner_client, client, channel_id):
+        """
+
+        :param TelegramClient owner_client:
+        :param TelegramClient client:
+        :param int channel_id:
+        :return: Channel
+        """
+        try:
+            channel = client.get_entity(PeerChannel(channel_id))
+            client(UpdateUsernameRequest(channel, ""))
+            return channel
+        except (ValueError, ChannelPrivateError):
+            owner_channel = owner_client.get_entity(PeerChannel(channel_id))
+            inv = owner_client(ExportInviteRequest(owner_channel))
+            client(ImportChatInviteRequest(inv.link.split('/')[-1]))
+            channel = client.get_entity(PeerChannel(channel_id))
+            sender = client.get_me()
+            self.admin(owner_client, sender, owner_channel)
+            return channel
+        except ChatAdminRequiredError:
+            owner_channel = owner_client.get_entity(PeerChannel(channel_id))
+            sender = client.get_me()
+            self.admin(owner_client, sender, owner_channel)
+            return client.get_entity(PeerChannel(channel_id))
+
+
+    def admin(self, owner_client, sender, owner_channel):
+        owner_client(
+            EditAdminRequest(channel=owner_channel, user_id=InputUser(sender.id, sender.access_hash),
+                             admin_rights=ChannelAdminRights(
+                                 change_info=True,
+                                 post_messages=True,
+                                 edit_messages=True,
+                                 delete_messages=True,
+                                 ban_users=True,
+                                 invite_users=True,
+                                 invite_link=True,
+                                 pin_messages=True,
+                                 add_admins=True,
+                             )))
 
     def create_channel(self, client, title, about):
         return client(CreateChannelRequest(title=title, about=about))
