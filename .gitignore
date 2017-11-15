@@ -100,10 +100,8 @@ ENV/
 # mypy
 .mypy_cache/
 
-
-
-
-
+.idea/
+.idea/*
 # mine:
-telectapi/sessions
+telectapi/sessions/
 telectapi/sessions/*
