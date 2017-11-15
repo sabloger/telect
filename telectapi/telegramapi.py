@@ -152,6 +152,9 @@ class TelegramApi:
         try:
             channel = client.get_entity(PeerChannel(channel_id))
             client(ExportInviteRequest(channel))
+            # todo:: check the owner is in the channel members
+            # todo:: check members count
+            # todo:: set list of sources to the about
             return channel
         except (ValueError, ChannelPrivateError):
             owner_channel = owner_client.get_entity(PeerChannel(channel_id))
