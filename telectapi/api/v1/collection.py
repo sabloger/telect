@@ -1,4 +1,6 @@
 # -*- encoding=UTF-8 -*-
+from django.core.exceptions import ObjectDoesNotExist
+from django.http import JsonResponse
 from rest_framework import viewsets
 from rest_framework.decorators import detail_route
 from rest_framework.parsers import JSONParser
@@ -23,6 +25,22 @@ class Collection(viewsets.ViewSet):
 
         collections = models.Collection.objects.filter(user=request.user)
         return Response(collections.values())
+
+    @auth
+    def retrieve(self, request, pk):
+        try:
+            collection = models.Collection.objects.get(user=request.user, id=pk)
+            tg = TelegramApi()
+            client = tg.get_existing_session(request.user)
+            channel = tg.get_channel(client, collection.destination_data['id'])
+            sources = collection.source_set.all()
+            res_sources = []
+            for source in sources:
+                res_sources.append(tg.get_channel(client=client, channel_id=source.source_data['id']).to_dict())
+            return JsonResponse(
+                {'id': collection.pk, 'channel': channel.to_dict(), 'sources': res_sources})
+        except ObjectDoesNotExist:
+            return Response(status=404, data={"message": "record_not_found"})
 
     @auth
     def create(self, request):
@@ -85,3 +103,5 @@ class Collection(viewsets.ViewSet):
             sources.delete()
 
         return Response({'collection': collection.id})
+
+    # todo def destroy!

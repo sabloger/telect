@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import JsonResponse
 from rest_framework import viewsets
 from rest_framework.decorators import list_route
@@ -14,7 +15,7 @@ from telectapi.telegramapi import TelegramApi
 class User(viewsets.ViewSet):
     parser_classes = (JSONParser,)
 
-    @list_route(methods=['post'])  # , permission_classes=[IsAdminOrIsSelf]
+    @list_route(methods=['post'])
     def auth(self, request):
         """
 
@@ -22,6 +23,7 @@ class User(viewsets.ViewSet):
         :return:
         """
         # todo: check user existing and session existing
+        # bug: PhoneNumberUnoccupiedError new register
         mobile = request.data.get('mobile', None)
         code = request.data.get('code', None)
 
@@ -36,7 +38,7 @@ class User(viewsets.ViewSet):
                 scres = client.sign_in(phone=mobile)
                 if type(scres) == SentCode:
                     AuthTemp.objects.create(mobile=mobile, phone_code_hash=scres.phone_code_hash)
-                    return Response(status=200, data={"message": "success"})
+                    return Response(status=200, data={"message": "waiting_for_code"})
                 else:
                     return Response(status=400, data={"message": "error"})
             else:
@@ -47,15 +49,14 @@ class User(viewsets.ViewSet):
                     at.is_used = True
                     at.save()
 
-                resl= client.sign_in(phone=mobile, code=code, phone_code_hash=at.phone_code_hash)
-                print("resl:",resl)
-
-        user = models.User.objects.get(mobile=mobile)
-        if user is None:
-            user = models.User.objects.create(mobile=mobile, session_name=tg.make_session(mobile))
-        else:
+                resl = client.sign_in(phone=mobile, code=code, phone_code_hash=at.phone_code_hash)
+                print("resl:", resl)
+        try:
+            user = models.User.objects.get(mobile=mobile)
             user.session_name = tg.make_session(mobile)
             user.save()
+        except ObjectDoesNotExist:
+            user = models.User.objects.create(mobile=mobile, session_name=tg.make_session(mobile))
 
         jr = JsonResponse(client.get_me().to_dict())
         jr['Authorization'] = user.make_token()

@@ -5,7 +5,7 @@ from random import randint
 from telethon import TelegramClient
 from telethon.errors import ChannelPrivateError, ChatAdminRequiredError
 from telethon.tl.functions.channels import CreateChannelRequest, EditAdminRequest, ExportInviteRequest, \
-    UpdateUsernameRequest
+    EditAboutRequest
 from telethon.tl.functions.messages import ImportChatInviteRequest
 from telethon.tl.types import PeerChannel, ChannelAdminRights, InputUser
 
@@ -151,7 +151,7 @@ class TelegramApi:
         """
         try:
             channel = client.get_entity(PeerChannel(channel_id))
-            client(UpdateUsernameRequest(channel, ""))
+            client(ExportInviteRequest(channel))
             return channel
         except (ValueError, ChannelPrivateError):
             owner_channel = owner_client.get_entity(PeerChannel(channel_id))
@@ -166,7 +166,6 @@ class TelegramApi:
             sender = client.get_me()
             self.admin(owner_client, sender, owner_channel)
             return client.get_entity(PeerChannel(channel_id))
-
 
     def admin(self, owner_client, sender, owner_channel):
         owner_client(
