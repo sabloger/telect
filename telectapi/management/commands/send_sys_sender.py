@@ -5,6 +5,7 @@ from django.core.management import BaseCommand  # The class must be named Comman
 from telethon.errors import ChannelInvalidError
 from telethon.tl.functions.contacts import ResolveUsernameRequest
 from telethon.tl.functions.messages import ForwardMessagesRequest
+from telethon.tl.types import Message
 
 from telectapi.models import User
 from telectapi.telegramapi import TelegramApi
@@ -44,14 +45,15 @@ class Command(BaseCommand):
 
                     messages = messages[::-1]
                     for msg in messages:
-                        if msg.date.timestamp() > source.last_fm_time.timestamp():
-                            print("are")
-                            sys_sender_client(ForwardMessagesRequest(
-                                from_peer=channel,
-                                id=[msg.id],
-                                to_peer=dest_chan
-                            ))
-                            source.last_fm_time = msg.date
-                            source.last_fm_id = msg.id
-                            source.save()
+                        if type(msg) is Message:
+                            if msg.date.timestamp() > source.last_fm_time.timestamp():
+                                print("msg:", msg.id)
+                                sys_sender_client(ForwardMessagesRequest(
+                                    from_peer=channel,
+                                    id=[msg.id],
+                                    to_peer=dest_chan
+                                ))
+                                source.last_fm_time = msg.date
+                                source.last_fm_id = msg.id
+                                source.save()
         self.stdout.write("Doing All The Things!")
