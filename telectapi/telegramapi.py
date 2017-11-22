@@ -1,7 +1,8 @@
 import os
-from datetime import timedelta
+from datetime import timedelta, datetime
 from random import randint
 
+import pytz
 from telethon import TelegramClient
 from telethon.errors import ChannelPrivateError, ChatAdminRequiredError
 from telethon.tl.functions.channels import CreateChannelRequest, EditAdminRequest, ExportInviteRequest, \
@@ -141,9 +142,23 @@ class TelegramApi:
         """
         return client.get_entity(PeerChannel(channel_id))
 
-    def get_dest_channel(self, owner_client, client, channel_id):
+    def get_about(self, sources):
         """
 
+        :param  sources:
+        :return:
+        """
+        about = "Channels:"
+        for source in sources:
+            about += "\n@" + source.source_data['username']
+
+        about += "\nLast update:\n" + datetime.now(pytz.timezone('Asia/Tehran')).strftime("%Y-%m-%d %H:%M:%S")
+        return about
+
+    def get_dest_channel(self, owner_client, client, channel_id, sources):
+        """
+
+        :param sources:
         :param TelegramClient owner_client:
         :param TelegramClient client:
         :param int channel_id:
@@ -152,6 +167,7 @@ class TelegramApi:
         try:
             channel = client.get_entity(PeerChannel(channel_id))
             client(ExportInviteRequest(channel))
+            # client(EditAboutRequest(channel, self.get_about(sources)))
             # todo:: check the owner is in the channel members
             # todo:: check members count
             # todo:: set list of sources to the about

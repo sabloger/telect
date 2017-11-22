@@ -56,6 +56,7 @@ class Source(models.Model):
     source_data = JSONField()
     last_fm_id = models.BigIntegerField(default=0, null=True)
     last_fm_time = models.DateTimeField(default=datetime.datetime.now, null=True)
+    are_collecting = models.BooleanField(default=False)
     collection = models.ForeignKey(Collection, on_delete=models.DO_NOTHING)
 
     def __str__(self):
