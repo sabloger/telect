@@ -1,12 +1,10 @@
 import os
-from datetime import timedelta, datetime
+from datetime import timedelta
 from random import randint
 
-import pytz
 from telethon import TelegramClient
 from telethon.errors import ChannelPrivateError, ChatAdminRequiredError
-from telethon.tl.functions.channels import CreateChannelRequest, EditAdminRequest, ExportInviteRequest, \
-    EditAboutRequest
+from telethon.tl.functions.channels import CreateChannelRequest, EditAdminRequest, ExportInviteRequest
 from telethon.tl.functions.messages import ImportChatInviteRequest
 from telethon.tl.types import PeerChannel, ChannelAdminRights, InputUser
 
@@ -29,7 +27,9 @@ class TelegramApi:
 
     @staticmethod
     def get_app_data():
-        return 159815, '82fc6a683d3434eb4c217a4b8bb10442'  # 922
+        return 129003, 'cf7558e59798a134a0181496e35d8c39'  # mahsa 937
+        # return 159815, '82fc6a683d3434eb4c217a4b8bb10442'  # 922
+        # return 113161, '914d0e65dfcdfc54caa23666efd4134c'  # 935
 
         # return {  #935
         #     113161,
@@ -112,6 +112,7 @@ class TelegramApi:
         print(session)
 
         client = TelegramClient(session, api_id, api_hash, timeout=timedelta(seconds=10))
+        # client.session.server_address = '149.154.167.50'
         client.connect()
 
         return client
@@ -152,7 +153,8 @@ class TelegramApi:
         for source in sources:
             about += "\n@" + source.source_data['username']
 
-        about += "\nLast update:\n" + datetime.now(pytz.timezone('Asia/Tehran')).strftime("%Y-%m-%d %H:%M:%S")
+        # about += "\nLast update:\n" + datetime.now(pytz.timezone('Asia/Tehran')).strftime("%Y-%m-%d %H:%M:%S")
+        about += "\n" + str(randint(0, 999))
         return about
 
     def get_dest_channel(self, owner_client, client, channel_id, sources):
@@ -167,7 +169,11 @@ class TelegramApi:
         try:
             channel = client.get_entity(PeerChannel(channel_id))
             client(ExportInviteRequest(channel))
-            # client(EditAboutRequest(channel, self.get_about(sources)))
+            # try:
+            #     client(EditAboutRequest(channel, self.get_about(sources)))
+            # except Exception as e:
+            #     print("error:", e)
+            #     pass
             # todo:: check the owner is in the channel members
             # todo:: check members count
             # todo:: set list of sources to the about
