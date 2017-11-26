@@ -11,10 +11,6 @@ from telethon.tl.types import PeerChannel, ChannelAdminRights, InputUser
 from telectapi.models import User
 
 
-# todo:: write a method that khodesh tasmim begire ke new kone ya session e salem darim!
-# todo: make session clients singleton??
-
-
 class TelegramApi:
     SESSIONS_DIR = 'sessions'
     SESSIONS_PREFIX = 'session_'
@@ -28,13 +24,8 @@ class TelegramApi:
     @staticmethod
     def get_app_data():
         return 129003, 'cf7558e59798a134a0181496e35d8c39'  # mahsa 937
-        # return 159815, '82fc6a683d3434eb4c217a4b8bb10442'  # 922
-        # return 113161, '914d0e65dfcdfc54caa23666efd4134c'  # 935
-
-        # return {  #935
-        #     113161,
-        #     '914d0e65dfcdfc54caa23666efd4134c'
-        # }
+        # return 159815, '82fc6a683d3434eb4c217a4b8bb10442'  # 922 XX fucked
+        # return 113161, '914d0e65dfcdfc54caa23666efd4134c'  # 935 XX fucked
 
     def connect_test_server(self):
         api_id, api_hash = self.get_app_data()
@@ -95,28 +86,6 @@ class TelegramApi:
             mobile = user
         return self.generated_sessions_dir + '/' + self.SESSIONS_PREFIX + str(mobile[-10:])
 
-    def get_new_session(self, user):
-        """
-
-        :param User|str user:
-        :return: TelegramClient
-        """
-        api_id, api_hash = self.get_app_data()
-        print(api_id)
-        print(api_hash)
-        if user is None:
-            print("empty user!")
-            return None
-
-        session = self.make_session(user)
-        print(session)
-
-        client = TelegramClient(session, api_id, api_hash, timeout=timedelta(seconds=10))
-        # client.session.server_address = '149.154.167.50'
-        client.connect()
-
-        return client
-
     def get_existing_session(self, user=None, session=None):
         """
 
@@ -134,6 +103,27 @@ class TelegramApi:
         client.connect()
         return client
 
+    def get_session(self, user):
+        """
+
+        :param User|str user:
+        :return: TelegramClient
+        """
+        api_id, api_hash = self.get_app_data()
+        print(api_id)
+        print(api_hash)
+        if user is None:
+            print("empty user!")
+            return None
+
+        session = self.make_session(user)
+        print(session)
+
+        client = TelegramClient(session, api_id, api_hash, timeout=timedelta(seconds=10))
+        client.connect()
+
+        return client
+
     def get_channel(self, client, channel_id):
         """
 
@@ -143,7 +133,7 @@ class TelegramApi:
         """
         return client.get_entity(PeerChannel(channel_id))
 
-    def get_about(self, sources):
+    def make_about(self, sources):
         """
 
         :param  sources:
@@ -153,9 +143,53 @@ class TelegramApi:
         for source in sources:
             about += "\n@" + source.source_data['username']
 
-        # about += "\nLast update:\n" + datetime.now(pytz.timezone('Asia/Tehran')).strftime("%Y-%m-%d %H:%M:%S")
+        # about += "\nLast update:\n" + timezone.now(pytz.timezone('Asia/Tehran')).strftime("%Y-%m-%d %H:%M:%S")
         about += "\n" + str(randint(0, 999))
         return about
+
+    def get_dest_channel_old(self, owner_client, client, channel_id, sources):
+        """
+
+        :param sources:
+        :param TelegramClient owner_client:
+        :param TelegramClient client:
+        :param int channel_id:
+        :return: Channel
+        """
+        try:
+            channel = client.get_entity(PeerChannel(channel_id))
+            print("get_dest_channel 1 channel:", channel)
+            exit(1)
+            client(ExportInviteRequest(channel))
+            # try:
+            #     client(EditAboutRequest(channel, self.get_about(sources)))
+            # except Exception as e:
+            #     print("error:", e)
+            #     pass
+            # todo:: check the owner is in the channel members
+            # todo:: check members count
+            # todo:: set list of sources to the about
+            return channel
+        except (ValueError, ChannelPrivateError) as e:
+            owner_channel = owner_client.get_entity(PeerChannel(channel_id))
+            inv = owner_client(ExportInviteRequest(owner_channel))
+            client(ImportChatInviteRequest(inv.link.split('/')[-1]))
+            channel = client.get_entity(PeerChannel(channel_id))
+            print("e:", e)
+            print("get_dest_channel 2 channel:", channel)
+            exit(1)
+            sender = client.get_me()
+            self.set_admin(owner_client, sender, owner_channel)
+            return channel
+        except ChatAdminRequiredError:
+            owner_channel = owner_client.get_entity(PeerChannel(channel_id))
+            sender = client.get_me()
+            self.set_admin(owner_client, sender, owner_channel)
+            channel = client.get_entity(PeerChannel(channel_id))
+
+            print("get_dest_channel 3 channel:", channel)
+            exit(1)
+            return channel
 
     def get_dest_channel(self, owner_client, client, channel_id, sources):
         """
@@ -168,31 +202,24 @@ class TelegramApi:
         """
         try:
             channel = client.get_entity(PeerChannel(channel_id))
-            client(ExportInviteRequest(channel))
-            # try:
-            #     client(EditAboutRequest(channel, self.get_about(sources)))
-            # except Exception as e:
-            #     print("error:", e)
-            #     pass
-            # todo:: check the owner is in the channel members
-            # todo:: check members count
-            # todo:: set list of sources to the about
+
+            if channel.admin_rights is None or not channel.admin_rights.post_messages or not channel.admin_rights.invite_link:
+                owner_channel = owner_client.get_entity(PeerChannel(channel_id))
+                sender = client.get_me()
+                self.set_admin(owner_client, sender, owner_channel)
+
             return channel
         except (ValueError, ChannelPrivateError):
             owner_channel = owner_client.get_entity(PeerChannel(channel_id))
             inv = owner_client(ExportInviteRequest(owner_channel))
             client(ImportChatInviteRequest(inv.link.split('/')[-1]))
             channel = client.get_entity(PeerChannel(channel_id))
-            sender = client.get_me()
-            self.admin(owner_client, sender, owner_channel)
-            return channel
-        except ChatAdminRequiredError:
-            owner_channel = owner_client.get_entity(PeerChannel(channel_id))
-            sender = client.get_me()
-            self.admin(owner_client, sender, owner_channel)
-            return client.get_entity(PeerChannel(channel_id))
 
-    def admin(self, owner_client, sender, owner_channel):
+            sender = client.get_me()
+            self.set_admin(owner_client, sender, owner_channel)
+            return channel
+
+    def set_admin(self, owner_client, sender, owner_channel):
         owner_client(
             EditAdminRequest(channel=owner_channel, user_id=InputUser(sender.id, sender.access_hash),
                              admin_rights=ChannelAdminRights(
@@ -214,4 +241,5 @@ class TelegramApi:
         """
         :return: TelegramClient
         """
-        return TelegramApi().get_existing_session(session="sys_client_922")
+        # return TelegramApi().get_existing_session(session="sys_client_922")
+        return self.get_session("+989227253035")

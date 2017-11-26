@@ -31,7 +31,7 @@ class User(viewsets.ViewSet):
             return Response(data={"message": "invalid_or_empty_mobile"}, status=400)
 
         tg = TelegramApi()
-        client = tg.get_new_session(mobile)
+        client = tg.get_session(mobile)
 
         if not client.is_user_authorized():
             print("inja1")

@@ -18,18 +18,25 @@ class Command(BaseCommand):
     # A command must define handle()
     def handle(self, *args, **options):
         print("Started:", datetime.now())
-        tg = TelegramApi()
-        sys_sender_client = tg.get_sys_sender_client()
+
+        telegram_api = TelegramApi()
+        sys_sender_client = telegram_api.get_sys_sender_client()
+
         for user in User.objects.all():
             print("user:", user)
-            user_client = tg.get_existing_session(user)
+
+            user_client = telegram_api.get_existing_session(user)
             print(user.collection_set.all())
+
             for collection in user.collection_set.all():
                 print("collection:", collection)
+
                 sources = collection.source_set.all()
+
                 sleep(1)
-                dest_chan = tg.get_dest_channel(user_client, sys_sender_client, collection.destination_data['id'],
-                                                sources)
+                destination_chan = telegram_api.get_dest_channel(user_client, sys_sender_client,
+                                                                 collection.destination_data['id'],
+                                                                 sources)
                 for source in sources:
                     try:
                         try:
@@ -43,44 +50,52 @@ class Command(BaseCommand):
                         except:
                             source.are_collecting = True
                             source.save()
-                            print("way")
+
                         print("source:", source)
+
                         try:
-                            channel = tg.get_channel(sys_sender_client,
-                                                     source.source_data['id'])  # result is in descending sort
+                            channel = telegram_api.get_channel(sys_sender_client, source.source_data['id'])
+
                         except ValueError:
                             sys_sender_client(ResolveUsernameRequest(source.source_data['username']))
-                            channel = tg.get_channel(sys_sender_client,
-                                                     source.source_data['id'])  # result is in descending sort
+                            channel = telegram_api.get_channel(sys_sender_client, source.source_data['id'])
+
                         sleep(1)
                         try:
                             total, messages, senders = user_client.get_message_history(channel, limit=20)
+
                         except ChannelInvalidError:
                             try:
                                 print("ChannelInvalidError:", source.source_data['username'])
                                 user_client(ResolveUsernameRequest(source.source_data['username']))
                                 total, messages, senders = user_client.get_message_history(channel, limit=20)
+
                             except:
                                 source.are_collecting = False
                                 source.save()
                                 continue
 
-                        messages = messages[::-1]
+                        messages = messages[::-1]  # reversing list to be asc (because telegram desc mid)
+
                         for msg in messages:
                             if type(msg) is Message:
                                 if msg.date.timestamp() > source.last_fm_time.timestamp():
                                     print("msg:", msg.id)
+
                                     sys_sender_client(ForwardMessagesRequest(
                                         from_peer=channel,
                                         id=[msg.id],
-                                        to_peer=dest_chan
+                                        to_peer=destination_chan,
+                                        silent=True
                                     ))
+
                                     source.last_fm_time = msg.date
                                     source.last_fm_id = msg.id
                                     source.save()
+
                         source.are_collecting = False
                         source.save()
                     except:
                         source.are_collecting = False
                         source.save()
-        self.stdout.write("Doing All The Things!")
+        self.stdout.write("End of work!")

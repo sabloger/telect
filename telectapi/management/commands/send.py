@@ -1,7 +1,7 @@
-from datetime import datetime
 from time import sleep
 
 from django.core.management import BaseCommand  # The class must be named Command, and subclass BaseCommand
+from django.utils import timezone
 from telethon.tl.functions.messages import ForwardMessagesRequest
 
 from telectapi.models import User
@@ -14,7 +14,7 @@ class Command(BaseCommand):
 
     # A command must define handle()
     def handle(self, *args, **options):
-        print("Started:", datetime.now())
+        print("Started:", timezone.now())
         tg = TelegramApi()
         for user in User.objects.all():
             client = tg.get_existing_session(user)
