@@ -31,10 +31,13 @@ class User(viewsets.ViewSet):
             return Response(data={"message": "invalid_or_empty_mobile"}, status=400)
 
         tg = TelegramApi()
-        client = tg.get_new_session(mobile)
+        client = tg.get_session(mobile)
 
         if not client.is_user_authorized():
+            print("inja1")
             if code is None:
+                print("inja2")
+
                 scres = client.sign_in(phone=mobile)
                 if type(scres) == SentCode:
                     AuthTemp.objects.create(mobile=mobile, phone_code_hash=scres.phone_code_hash)
@@ -42,7 +45,14 @@ class User(viewsets.ViewSet):
                 else:
                     return Response(status=400, data={"message": "error"})
             else:
-                at = AuthTemp.objects.get(mobile=mobile, is_used=False)  # todo: check date
+                print("inja3")
+
+                try:
+                    at = AuthTemp.objects.get(mobile=mobile, is_used=False)  # todo: check date
+                except ObjectDoesNotExist:
+                    return Response("error1")
+                # telectapi.models.MultipleObjectsReturned
+
                 if at is None:
                     return Response(status=400, data={"message": "mobile_not_found"})
                 else:
@@ -51,6 +61,8 @@ class User(viewsets.ViewSet):
 
                 resl = client.sign_in(phone=mobile, code=code, phone_code_hash=at.phone_code_hash)
                 print("resl:", resl)
+
+        print("client:", client)
         try:
             user = models.User.objects.get(mobile=mobile)
             user.session_name = tg.make_session(mobile)
@@ -58,7 +70,9 @@ class User(viewsets.ViewSet):
         except ObjectDoesNotExist:
             user = models.User.objects.create(mobile=mobile, session_name=tg.make_session(mobile))
 
-        jr = JsonResponse(client.get_me().to_dict())
-        jr['Authorization'] = user.make_token()
-        client.disconnect()
-        return jr
+        if client.get_me() is not None:
+            jr = JsonResponse(client.get_me().to_dict())
+            jr['Authorization'] = user.make_token()
+            client.disconnect()
+            return jr
+        return Response("error2")
