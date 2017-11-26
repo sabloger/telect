@@ -25,18 +25,26 @@ class Command(BaseCommand):
         for user in User.objects.all():
             print("user:", user)
 
-            user_client = telegram_api.get_existing_session(user)
-            print(user.collection_set.all())
+            try:
+
+                user_client = telegram_api.get_existing_session(user)
+                print(user.collection_set.all())
+            except:
+                continue
 
             for collection in user.collection_set.all():
                 print("collection:", collection)
 
-                sources = collection.source_set.all()
+                try:
+                    sources = collection.source_set.all()
 
-                sleep(1)
-                destination_chan = telegram_api.get_dest_channel(user_client, sys_sender_client,
-                                                                 collection.destination_data['id'],
-                                                                 sources)
+                    sleep(1)
+                    destination_chan = telegram_api.get_dest_channel(user_client, sys_sender_client,
+                                                                     collection.destination_data['id'],
+                                                                     sources)
+                except:
+                    continue
+
                 for source in sources:
                     try:
                         try:
