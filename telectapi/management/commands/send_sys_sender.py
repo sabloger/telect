@@ -2,7 +2,7 @@ import threading
 from datetime import datetime
 from time import sleep
 
-from django.core.management import BaseCommand  # The class must be named Command, and subclass BaseCommand
+from django.core.management import BaseCommand
 from telethon.errors import ChannelInvalidError
 from telethon.tl.functions.contacts import ResolveUsernameRequest
 from telethon.tl.functions.messages import ForwardMessagesRequest
@@ -13,10 +13,8 @@ from telectapi.telegramapi import TelegramApi
 
 
 class Command(BaseCommand):
-    # Show this when the user types help
     help = "Send messages!"
 
-    # A command must define handle()
     def handle(self, *args, **options):
         print("Started:", datetime.now())
 
@@ -34,8 +32,8 @@ class Command(BaseCommand):
                 continue
 
             for collection in user.collection_set.all():
-                # self.send_collection(collection, telegram_api, user_client, sys_sender_client)
                 sleep(1)
+                # self.send_collection(collection, telegram_api, user_client, sys_sender_client)
                 t = threading.Thread(target=self.send_collection,
                                      args=(collection, telegram_api, user_client, sys_sender_client))
                 t.start()
@@ -88,20 +86,21 @@ class Command(BaseCommand):
                         print("ChannelInvalidError:", source.source_data['username'])
                         user_client(ResolveUsernameRequest(source.source_data['username']))
                         total, messages, senders = user_client.get_message_history(channel, limit=20)
+                        print("Resolved! ChannelInvalidError:", source.source_data['username'])
 
                     except:
                         source.are_collecting = False
                         source.save()
                         continue
 
-                messages = messages[::-1]  # reversing list to be asc (because telegram desc mid)
+                messages = messages[::-1]  # reversing list to be asc (because telegram desc mid-e)
 
                 for msg in messages:
                     if type(msg) is Message:
                         if msg.date.timestamp() > source.last_fm_time.timestamp():
-                            print("msg:", msg.id)
-
+                            print("Channel:", source.source_data['username'], "MessageID:", msg.id)
                             sleep(3)
+
                             sys_sender_client(ForwardMessagesRequest(
                                 from_peer=channel,
                                 id=[msg.id],
@@ -115,6 +114,7 @@ class Command(BaseCommand):
 
                 source.are_collecting = False
                 source.save()
-            except:
+            except Exception as e:
+                print("except last:", e)
                 source.are_collecting = False
                 source.save()
